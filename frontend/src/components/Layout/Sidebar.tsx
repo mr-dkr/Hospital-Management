@@ -28,9 +28,9 @@ const Sidebar = () => {
             <li key={item.path}>
               <NavLink
                 to={item.path}
+                end={item.path === '/patients'}
                 className={({ isActive }) =>
-                  `flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors ${
-                    isActive ? 'bg-primary-100 text-primary-700 border-r-4 border-primary-600' : ''
+                  `flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors ${isActive ? 'bg-primary-100 text-primary-700 border-r-4 border-primary-600' : ''
                   }`
                 }
               >
