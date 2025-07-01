@@ -36,6 +36,17 @@ export interface Medication {
   frequency: string;
   duration: string;
 }
+export interface Feedback {
+  id: string;
+  patientId: string;
+  patientName: string;
+  appointmentId: string;
+  visitDate: string;
+  rating: 'happy' | 'satisfied' | 'not-satisfied';
+  comments: string;
+  submittedDate: string;
+  category: 'service' | 'wait-time' | 'treatment' | 'facilities' | 'overall';
+}
 
 export interface Appointment {
   id: string;

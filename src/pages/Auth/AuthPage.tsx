@@ -28,15 +28,15 @@ const AuthPage = () => {
         <h2 className="mt-4 text-3xl font-extrabold text-gray-900">Nidharshana Hospital</h2>
         <p className="mt-2 text-sm text-gray-600">Doctor's Appointment Management System</p>
       </div>
-      
+
       {isLoginForm ? (
         <LoginForm onToggleForm={toggleForm} />
       ) : (
         <SignupForm onToggleForm={toggleForm} />
       )}
-      
+
       <div className="mt-8 text-sm text-center text-gray-500">
-        <p>Demo Account: sarah@example.com / password123</p>
+        <p>Demo Account: murugesh@example.com / password123</p>
       </div>
     </div>
   );

@@ -14,6 +14,8 @@ import PatientDetailPage from './pages/Patients/PatientDetailPage';
 import AppointmentsPage from './pages/Appointments/AppointmentsPage';
 import NewAppointmentPage from './pages/Appointments/NewAppointmentPage';
 import ChatPage from './pages/Chat/ChatPage';
+import FeedbackPage from './pages/Feedback/FeedbackPage';
+import SettingsPage from './pages/Settings/SettingsPage';
 
 function App() {
   return (
@@ -21,7 +23,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<AuthPage />} />
-          
+
           <Route path="/" element={<MainLayout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
@@ -31,8 +33,10 @@ function App() {
             <Route path="appointments" element={<AppointmentsPage />} />
             <Route path="appointments/new" element={<NewAppointmentPage />} />
             <Route path="chat" element={<ChatPage />} />
+            <Route path="feedback" element={<FeedbackPage />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
-          
+
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>

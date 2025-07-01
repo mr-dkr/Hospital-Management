@@ -13,6 +13,7 @@ const AppointmentsPage = () => {
   const [alertMessage, setAlertMessage] = useState('');
   const { state } = useAuth();
   const user = state.user;
+  const [isLoading, setIsLoading] = useState<{ [appointmentId: string]: boolean }>({});
 
   const appointments = getAppointments();
 
@@ -49,6 +50,7 @@ const AppointmentsPage = () => {
   const filteredAppointments = getFilteredAppointments();
 
   const handleSendReminder = async (appointment: Appointment, patient: Patient) => {
+    setIsLoading(prev => ({ ...prev, [appointment.id]: true }));
     const payload = {
       to: `+91${patient.phone}`,
       name: patient.name,
@@ -73,6 +75,7 @@ const AppointmentsPage = () => {
     } catch {
       setAlertMessage(`Failed to send reminder to ${patient.name}.`);
     }
+    setIsLoading(prev => ({ ...prev, [appointment.id]: false }));
     setShowAlert(true);
     setTimeout(() => {
       setShowAlert(false);
@@ -243,9 +246,16 @@ const AppointmentsPage = () => {
                           <button
                             onClick={() => handleSendReminder(appointment, patient)}
                             className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                            disabled={isLoading[appointment.id]}
                           >
-                            <Bell className="h-3 w-3 mr-1" />
-                            Send Reminder
+                            {isLoading[appointment.id] ? (
+                              <span className="animate-pulse">Loading...</span>
+                            ) : (
+                              <>
+                                <Bell className="h-3 w-3 mr-1" />
+                                Send Reminder
+                              </>
+                            )}
                           </button>
                         )}
                       </td>

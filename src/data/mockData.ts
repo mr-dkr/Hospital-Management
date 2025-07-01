@@ -1,4 +1,4 @@
-import { Patient, Visit, User, Appointment } from '../types';
+import { Patient, Visit, User, Appointment, Feedback } from '../types';
 
 export const mockUsers: User[] = [
   {
@@ -66,6 +66,27 @@ export const mockPatients: Patient[] = [
     allergies: ['Penicillin'],
     createdAt: '2023-04-04T16:45:00Z',
   },
+    {
+    id: '5',
+    name: 'Priya Lakshmi',
+    phone: '9876543215',
+    email: 'priya.lakshmi@gmail.com',
+    dateOfBirth: '1988-11-25',
+    gender: 'female',
+    address: '654 Mylapore, Chennai, Tamil Nadu',
+    allergies: ['Latex'],
+    createdAt: '2023-05-12'
+  },
+  {
+    id: '6',
+    name: 'Rajesh Kannan',
+    phone: '8765432109',
+    email: 'rajesh.kannan@gmail.com',
+    dateOfBirth: '1995-09-30',
+    gender: 'male',
+    address: '987 Tambaram, Chennai, Tamil Nadu',
+    createdAt: '2023-06-18'
+  }
 ];
 
 export const mockVisits: Visit[] = [
@@ -240,6 +261,52 @@ export const mockAppointments: Appointment[] = [
   },
 ];
 
+export const mockFeedback: Feedback[] = [
+  {
+    id: '1',
+    patientId: '1',
+    patientName: 'Murugesh Kumar',
+    appointmentId: '1',
+    visitDate: '2024-01-15',
+    rating: 'happy',
+    comments: 'Dr. Murugesh Kumar was very thorough and explained everything clearly. The treatment has been very effective.',
+    submittedDate: '2024-01-16',
+    category: 'treatment'
+  },
+  {
+    id: '2',
+    patientId: '2',
+    patientName: 'Jeyaseelan V',
+    appointmentId: '2',
+    visitDate: '2024-01-10',
+    rating: 'satisfied',
+    comments: 'Good consultation, but had to wait longer than expected. The phone consultation was convenient.',
+    submittedDate: '2024-01-11',
+    category: 'wait-time'
+  },
+  {
+    id: '3',
+    patientId: '4',
+    patientName: 'Divakar Thambidurai',
+    appointmentId: '4',
+    visitDate: '2024-01-08',
+    rating: 'happy',
+    comments: 'Excellent service and very professional staff. The migraine treatment worked perfectly.',
+    submittedDate: '2024-01-09',
+    category: 'overall'
+  },
+  {
+    id: '4',
+    patientId: '3',
+    patientName: 'Nirmal Raj',
+    appointmentId: '3',
+    visitDate: '2024-01-05',
+    rating: 'not-satisfied',
+    comments: 'The waiting area was crowded and the appointment was delayed by 45 minutes. Need better time management.',
+    submittedDate: '2024-01-06',
+    category: 'service'
+  }
+];
 // Function to simulate authentication
 export const authenticate = (email: string, password: string): User | null => {
   const user = mockUsers.find(u => u.email === email && u.password === password);
@@ -280,6 +347,10 @@ export const addVisit = (visit: Omit<Visit, 'id'>): Visit => {
   };
   mockVisits.push(newVisit);
   return newVisit;
+};
+
+export const getFeedback = (): Feedback[] => {
+  return [...mockFeedback];
 };
 
 // Function to get appointments

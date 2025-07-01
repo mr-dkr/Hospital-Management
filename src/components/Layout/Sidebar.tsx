@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Users, UserPlus, Calendar, Home, LogOut, MessageSquare, Building2 } from 'lucide-react';
+import { Users, UserPlus, Calendar, Home, LogOut, MessageSquare, Building2, Settings, FolderEdit } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
@@ -12,6 +12,8 @@ const Sidebar = () => {
     { path: '/patients/new', name: 'Add Patient', icon: <UserPlus size={20} /> },
     { path: '/appointments', name: 'Appointments', icon: <Calendar size={20} /> },
     { path: '/chat', name: 'Chat', icon: <MessageSquare size={20} /> },
+    { path: '/feedback', name: 'Feedback', icon: <FolderEdit size={20} /> },
+    { path: '/settings', name: 'Settings', icon: <Settings size={20} /> },
   ];
 
   return (
@@ -30,8 +32,7 @@ const Sidebar = () => {
                 to={item.path}
                 end={item.path === '/patients'}
                 className={({ isActive }) =>
-                  `flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors ${
-                    isActive ? 'bg-primary-100 text-primary-700 border-r-4 border-primary-600' : ''
+                  `flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors ${isActive ? 'bg-primary-100 text-primary-700 border-r-4 border-primary-600' : ''
                   }`
                 }
               >

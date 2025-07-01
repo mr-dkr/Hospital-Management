@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Filter, UserPlus, User, Bell } from 'lucide-react';
-import { mockPatients, updateAppointmentReminderStatus } from '../../data/mockData';
+import { Search, Plus, Filter, UserPlus, User, Bell, Edit } from 'lucide-react';
+import { mockPatients, getAppointments } from '../../data/mockData';
 import { Patient } from '../../types';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 
 const PatientListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [patients, setPatients] = useState<Patient[]>(mockPatients);
-  const [alertPatientName, setAlertPatientName] = useState('');
+  const [patients] = useState<Patient[]>(mockPatients);
+  const [feedbackSent, setFeedbackSent] = useState<{ [patientId: string]: boolean }>({});
+  const [isLoading, setIsLoading] = useState<{ [patientId: string]: boolean }>({});
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const { state } = useAuth();
+  const user = state.user;
 
   const filteredPatients = patients.filter(
     (patient) =>
@@ -17,9 +23,59 @@ const PatientListPage = () => {
       patient.phone.includes(searchTerm)
   );
 
+  const handleGetFeedback = async (patient: Patient) => {
+    setIsLoading(prev => ({ ...prev, [patient.id]: true }));
+    // Get all appointments for this patient
+    const appointments = getAppointments().filter(a => a.patientId === patient.id);
+    // Find the latest appointment by date
+    const lastRecentAppointment = appointments
+      .filter(a => isToday(new Date(a.date)) || isYesterday(new Date(a.date)))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    // Format date and time if available
+    const dateStr = lastRecentAppointment ? new Date(lastRecentAppointment.date).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() : '';
+    const timeStr = lastRecentAppointment ? new Date(lastRecentAppointment.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(':00', '').toUpperCase() : '';
+    const payload = {
+      to: `+91${patient.phone}`,
+      name: patient.name,
+      date: dateStr,
+      doc_name: user?.name || 'Doctor',
+      time: timeStr,
+      message_type: 'feedback',
+      message_lang: 'us',
+    };
+    try {
+      const response = await fetch('https://alti.prajnagpt.net:7500/api/whatsapp/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        setFeedbackSent(prev => ({ ...prev, [patient.id]: true }));
+        setShowAlert(true);
+        setAlertMessage(`Feedback request sent to ${patient.name}.`)
+      } else {
+        setAlertMessage(`Failed to send feedback request to ${patient.name}.`);
+      }
+    } catch {
+      setAlertMessage(`Failed to send feedback request to ${patient.name}.`);
+    }
+    setIsLoading(prev => ({ ...prev, [patient.id]: false }));
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 3000);
+  };
 
   return (
     <div className="animate-fade-in">
+      {/* Alert notification */}
+      {showAlert && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-slide-in">
+          <div className="flex items-center">
+            <Bell className="h-5 w-5 mr-2" />
+            <span>{alertMessage}</span>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-4 md:mb-0">Patients</h1>
         <Link
@@ -132,6 +188,34 @@ const PatientListPage = () => {
                           >
                             View
                           </Link>
+
+                        </div>
+                      </td>
+                      <td>
+                        <div className="flex items-center space-x-3">
+                          {!feedbackSent[patient.id] ? (
+                            <button
+                              onClick={() => handleGetFeedback(patient)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-secondary-600 hover:bg-secondary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                              disabled={isLoading[patient.id]}
+                            >
+                              {isLoading[patient.id] ? (
+                                <>
+                                  <span className="animate-pulse">Loading...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Edit className="h-3 w-3 mr-1" />
+                                  Get Feedback
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <span className="inline-flex items-center text-green-600 text-sm">
+                              <Edit className="h-4 w-4 mr-1" />
+                              Request Sent ✓
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
