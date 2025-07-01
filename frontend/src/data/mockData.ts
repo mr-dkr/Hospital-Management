@@ -1,10 +1,10 @@
-import { Patient, Visit, User } from '../types';
+import { Patient, Visit, User, Appointment } from '../types';
 
 export const mockUsers: User[] = [
   {
     id: '1',
-    name: 'Dr. Sarah Johnson',
-    email: 'sarah@example.com',
+    name: 'Dr. Murugesh Kumar',
+    email: 'murugesh@example.com',
     role: 'doctor',
     password: 'password123', // In a real app, this would be hashed
   },
@@ -20,39 +20,51 @@ export const mockUsers: User[] = [
 export const mockPatients: Patient[] = [
   {
     id: '1',
-    name: 'John Smith',
-    phone: '(555) 123-4567',
-    email: 'john@example.com',
+    name: 'Murugesh Kumar',
+    phone: '7708787590',
+    email: 'murugesh@example.com',
     gender: 'male',
-    dateOfBirth: '1985-05-15',
-    bloodGroup: 'O+',
-    address: '123 Main St, Anytown, CA 94583',
-    allergies: ['Penicillin', 'Peanuts'],
-    createdAt: '2023-01-15T09:30:00Z',
+    dateOfBirth: '1982-03-20',
+    bloodGroup: 'B+',
+    address: 'Chennai, Tamil Nadu',
+    allergies: [],
+    createdAt: '2023-04-01T10:00:00Z',
   },
   {
     id: '2',
-    name: 'Emily Davis',
-    phone: '(555) 987-6543',
-    email: 'emily@example.com',
-    gender: 'female',
-    dateOfBirth: '1990-11-28',
-    bloodGroup: 'A-',
-    address: '456 Oak Ave, Somewhere, NY 10001',
-    allergies: [],
-    createdAt: '2023-02-20T14:15:00Z',
+    name: 'Jeyaseelan V',
+    phone: '9944411950',
+    email: 'jeyaseelan@example.com',
+    gender: 'male',
+    dateOfBirth: '1975-08-12',
+    bloodGroup: 'O+',
+    address: 'Coimbatore, Tamil Nadu',
+    allergies: ['Aspirin'],
+    createdAt: '2023-04-02T11:30:00Z',
   },
   {
     id: '3',
-    name: 'Michael Johnson',
-    phone: '(555) 555-5555',
-    email: 'michael@example.com',
+    name: 'Nirmal Raj',
+    phone: '9840116889',
+    email: 'nirmal@example.com',
     gender: 'male',
-    dateOfBirth: '1978-08-03',
-    bloodGroup: 'B+',
-    address: '789 Pine St, Elsewhere, TX 75001',
-    allergies: ['Sulfa drugs'],
-    createdAt: '2023-03-10T11:00:00Z',
+    dateOfBirth: '1988-12-05',
+    bloodGroup: 'A+',
+    address: 'Madurai, Tamil Nadu',
+    allergies: [],
+    createdAt: '2023-04-03T14:20:00Z',
+  },
+  {
+    id: '4',
+    name: 'Divakar Thambidurai',
+    phone: '8973983311',
+    email: 'divakar@example.com',
+    gender: 'male',
+    dateOfBirth: '1980-06-18',
+    bloodGroup: 'AB+',
+    address: 'Salem, Tamil Nadu',
+    allergies: ['Penicillin'],
+    createdAt: '2023-04-04T16:45:00Z',
   },
 ];
 
@@ -121,6 +133,113 @@ export const mockVisits: Visit[] = [
   },
 ];
 
+// Generate appointments for yesterday, today, and tomorrow
+const today = new Date();
+const yesterday = new Date(today);
+yesterday.setDate(yesterday.getDate() - 1);
+const tomorrow = new Date(today);
+tomorrow.setDate(tomorrow.getDate() + 1);
+
+export const mockAppointments: Appointment[] = [
+  // Yesterday's appointments
+  {
+    id: 'apt-1',
+    patientId: '4',
+    date: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 9, 0).toISOString(),
+    type: 'walk-in',
+    status: 'completed',
+    reminderSent: true,
+    notes: 'Regular checkup',
+  },
+  {
+    id: 'apt-2',
+    patientId: '5',
+    date: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 11, 30).toISOString(),
+    type: 'phone-call',
+    status: 'completed',
+    reminderSent: true,
+    notes: 'Follow-up consultation',
+  },
+  {
+    id: 'apt-3',
+    patientId: '6',
+    date: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 14, 0).toISOString(),
+    type: 'walk-in',
+    status: 'completed',
+    reminderSent: false,
+    notes: 'Emergency visit',
+  },
+
+  // Today's appointments
+
+  {
+    id: 'apt-5',
+    patientId: '1',
+    date: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 11, 0).toISOString(),
+    type: 'phone-call',
+    status: 'scheduled',
+    reminderSent: false,
+    notes: 'Medication review',
+  },
+  {
+    id: 'apt-6',
+    patientId: '2',
+    date: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 15, 30).toISOString(),
+    type: 'walk-in',
+    status: 'scheduled',
+    reminderSent: true,
+    notes: 'Follow-up visit',
+  },
+  {
+    id: 'apt-7',
+    patientId: '4',
+    date: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 16, 45).toISOString(),
+    type: 'phone-call',
+    status: 'scheduled',
+    reminderSent: false,
+    notes: 'Consultation',
+  },
+    {
+    id: 'apt-8',
+    patientId: '3',
+    date: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 17, 45).toISOString(),
+    type: 'walk-in',
+    status: 'scheduled',
+    reminderSent: false,
+    notes: 'Consultation',
+  },
+
+
+  // Tomorrow's appointments
+  {
+    id: 'apt-8',
+    patientId: '4',
+    date: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 10, 0).toISOString(),
+    type: 'walk-in',
+    status: 'scheduled',
+    reminderSent: false,
+    notes: 'Blood test results review',
+  },
+  {
+    id: 'apt-9',
+    patientId: '2',
+    date: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 13, 30).toISOString(),
+    type: 'phone-call',
+    status: 'scheduled',
+    reminderSent: false,
+    notes: 'Prescription renewal',
+  },
+  {
+    id: 'apt-10',
+    patientId: '6',
+    date: new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), 16, 0).toISOString(),
+    type: 'walk-in',
+    status: 'scheduled',
+    reminderSent: false,
+    notes: 'Physical therapy consultation',
+  },
+];
+
 // Function to simulate authentication
 export const authenticate = (email: string, password: string): User | null => {
   const user = mockUsers.find(u => u.email === email && u.password === password);
@@ -161,4 +280,42 @@ export const addVisit = (visit: Omit<Visit, 'id'>): Visit => {
   };
   mockVisits.push(newVisit);
   return newVisit;
+};
+
+// Function to get appointments
+export const getAppointments = (): Appointment[] => {
+  return [...mockAppointments];
+};
+
+// Function to get appointments by date
+export const getAppointmentsByDate = (date: Date): Appointment[] => {
+  const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return mockAppointments.filter(appointment => {
+    const appointmentDate = new Date(appointment.date);
+    const appointmentDateOnly = new Date(appointmentDate.getFullYear(), appointmentDate.getMonth(), appointmentDate.getDate());
+    return appointmentDateOnly.getTime() === targetDate.getTime();
+  });
+};
+
+// Function to add appointment
+export const addAppointment = (appointment: Omit<Appointment, 'id'>): Appointment => {
+  const newAppointment: Appointment = {
+    ...appointment,
+    id: `apt-${mockAppointments.length + 1}`,
+  };
+  mockAppointments.push(newAppointment);
+  return newAppointment;
+};
+
+// Function to update appointment reminder status
+export const updateAppointmentReminderStatus = (appointmentId: string): void => {
+  const appointment = mockAppointments.find(apt => apt.id === appointmentId);
+  if (appointment) {
+    appointment.reminderSent = true;
+  }
+};
+
+// Function to get today's appointments
+export const getTodaysAppointments = (): Appointment[] => {
+  return getAppointmentsByDate(new Date());
 };

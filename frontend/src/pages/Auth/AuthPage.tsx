@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LoginForm from '../../components/Auth/LoginForm';
 import SignupForm from '../../components/Auth/SignupForm';
-import { Stethoscope } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 const AuthPage = () => {
   const [isLoginForm, setIsLoginForm] = useState(true);
@@ -22,10 +22,10 @@ const AuthPage = () => {
       <div className="text-center mb-8">
         <div className="flex justify-center">
           <div className="h-16 w-16 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center">
-            <Stethoscope className="h-8 w-8" />
+            <Building2 className="h-8 w-8" />
           </div>
         </div>
-        <h2 className="mt-4 text-3xl font-extrabold text-gray-900">MedCare Pro</h2>
+        <h2 className="mt-4 text-3xl font-extrabold text-gray-900">Nidharshana Hospital</h2>
         <p className="mt-2 text-sm text-gray-600">Doctor's Appointment Management System</p>
       </div>
       

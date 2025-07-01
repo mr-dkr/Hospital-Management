@@ -37,6 +37,16 @@ export interface Medication {
   duration: string;
 }
 
+export interface Appointment {
+  id: string;
+  patientId: string;
+  date: string;
+  type: 'walk-in' | 'phone-call';
+  status: 'scheduled' | 'completed' | 'cancelled';
+  reminderSent: boolean;
+  notes?: string;
+}
+
 export type AuthState = {
   user: User | null;
   isAuthenticated: boolean;
@@ -52,4 +62,17 @@ export interface PatientFormData extends Omit<Patient, 'id' | 'createdAt'> {
 
 export interface VisitFormData extends Omit<Visit, 'id' | 'medications'> {
   medications: string;
+}
+
+export interface AppointmentFormData {
+  patientId?: string;
+  newPatient?: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
+  date: string;
+  time: string;
+  type: 'walk-in' | 'phone-call';
+  notes?: string;
 }

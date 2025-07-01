@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Users, UserPlus, Calendar, Home, LogOut, MessageSquare } from 'lucide-react';
+import { Users, UserPlus, Calendar, Home, LogOut, MessageSquare, Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
@@ -18,8 +18,8 @@ const Sidebar = () => {
     <div className="bg-white h-full shadow-md">
       <div className="px-4 py-6">
         <h2 className="text-xl font-bold text-primary-700 flex items-center">
-          <Calendar className="mr-2" />
-          MedCare Pro
+          <Building2 className="mr-2" />
+          Nidharshana Hospital
         </h2>
       </div>
       <nav className="mt-8">
@@ -30,7 +30,8 @@ const Sidebar = () => {
                 to={item.path}
                 end={item.path === '/patients'}
                 className={({ isActive }) =>
-                  `flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors ${isActive ? 'bg-primary-100 text-primary-700 border-r-4 border-primary-600' : ''
+                  `flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors ${
+                    isActive ? 'bg-primary-100 text-primary-700 border-r-4 border-primary-600' : ''
                   }`
                 }
               >
@@ -54,4 +55,4 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar
+export default Sidebar;

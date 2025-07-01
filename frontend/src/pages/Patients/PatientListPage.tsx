@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, Filter, UserPlus, User } from 'lucide-react';
-import { mockPatients } from '../../data/mockData';
+import { Search, Plus, Filter, UserPlus, User, Bell } from 'lucide-react';
+import { mockPatients, updateAppointmentReminderStatus } from '../../data/mockData';
 import { Patient } from '../../types';
 import { format } from 'date-fns';
 
 const PatientListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [patients, setPatients] = useState<Patient[]>(mockPatients);
+  const [alertPatientName, setAlertPatientName] = useState('');
 
   const filteredPatients = patients.filter(
-    (patient) => 
+    (patient) =>
       patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.phone.includes(searchTerm)
   );
+
 
   return (
     <div className="animate-fade-in">
@@ -28,7 +30,7 @@ const PatientListPage = () => {
           Add New Patient
         </Link>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-200">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -44,14 +46,14 @@ const PatientListPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </button>
           </div>
         </div>
-        
+
         {filteredPatients.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -75,8 +77,8 @@ const PatientListPage = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Visit
                   </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -90,7 +92,7 @@ const PatientListPage = () => {
                   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
                     age--;
                   }
-                  
+
                   return (
                     <tr key={patient.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -122,10 +124,15 @@ const PatientListPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         N/A
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Link to={`/patients/${patient.id}`} className="text-primary-600 hover:text-primary-900">
-                          View
-                        </Link>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center space-x-3">
+                          <Link
+                            to={`/patients/${patient.id}`}
+                            className="text-primary-600 hover:text-primary-900 transition-colors"
+                          >
+                            View
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );

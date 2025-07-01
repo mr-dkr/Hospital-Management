@@ -1,30 +1,64 @@
-import React from 'react';
-import { Users, Activity, Calendar, Clock, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Users, Activity, Calendar, ChevronRight, Bell, Phone, User as UserIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { mockPatients, mockVisits } from '../../data/mockData';
+import { mockPatients, getTodaysAppointments, getPatientById, updateAppointmentReminderStatus } from '../../data/mockData';
 import { format } from 'date-fns';
 
 const DashboardPage = () => {
   const { state } = useAuth();
   const user = state.user;
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
-  // Get upcoming appointments (visits with a future date)
-  const upcomingAppointments = mockVisits
-    .filter(visit => {
-      const visitDate = new Date(visit.date);
-      return visitDate > new Date();
-    })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5);
+  // Get today's appointments
+  const todaysAppointments = getTodaysAppointments();
 
-  // Get recent visits
-  const recentVisits = [...mockVisits]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+  const handleSendReminder = async (appointment, patient) => {
+    // Prepare WhatsApp API payload
+    const payload = {
+      to: `+91${patient.phone}`,
+      name: patient.name,
+      date: format(new Date(appointment.date), 'do MMMM yyyy').toUpperCase(),
+      doc_name: user?.name || 'Doctor',
+      time: format(new Date(appointment.date), 'h:mm a').toUpperCase(),
+      message_type: 'reminder',
+      message_lang: 'us',
+    };
+
+    try {
+      const response = await fetch('https://alti.prajnagpt.net:7500/api/whatsapp/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        updateAppointmentReminderStatus(appointment.id);
+        setAlertMessage(`Reminder sent to ${patient.name} successfully!`);
+      } else {
+        setAlertMessage(`Failed to send reminder to ${patient.name}.`);
+      }
+    } catch (error) {
+      setAlertMessage(`Failed to send reminder to ${patient.name}.`);
+    }
+    setShowAlert(true);
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 3000);
+  };
 
   return (
     <div className="animate-fade-in">
+      {/* Alert notification */}
+      {showAlert && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-slide-in">
+          <div className="flex items-center">
+            <Bell className="h-5 w-5 mr-2" />
+            <span>{alertMessage}</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
         <p className="text-gray-600">
@@ -42,113 +76,117 @@ const DashboardPage = () => {
             <h3 className="text-2xl font-bold">{mockPatients.length}</h3>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-sm p-6 flex items-center">
           <div className="h-12 w-12 rounded-lg bg-secondary-100 text-secondary-600 flex items-center justify-center mr-4">
             <Activity size={24} />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total Visits</p>
-            <h3 className="text-2xl font-bold">{mockVisits.length}</h3>
+            <p className="text-sm text-gray-500">Today's Appointments</p>
+            <h3 className="text-2xl font-bold">{todaysAppointments.length}</h3>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-sm p-6 flex items-center">
           <div className="h-12 w-12 rounded-lg bg-accent-100 text-accent-600 flex items-center justify-center mr-4">
             <Calendar size={24} />
           </div>
           <div>
-            <p className="text-sm text-gray-500">Upcoming Appointments</p>
-            <h3 className="text-2xl font-bold">{upcomingAppointments.length}</h3>
+            <p className="text-sm text-gray-500">Pending Reminders</p>
+            <h3 className="text-2xl font-bold">
+              {todaysAppointments.filter(apt => !apt.reminderSent).length}
+            </h3>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-800">Upcoming Appointments</h2>
+            <h2 className="text-lg font-semibold text-gray-800">Today's Appointments</h2>
             <Link to="/appointments" className="text-primary-600 text-sm hover:underline flex items-center">
               View All <ChevronRight size={16} />
             </Link>
           </div>
           <div className="p-4">
-            {upcomingAppointments.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
-                {upcomingAppointments.map(appointment => {
-                  const patient = mockPatients.find(p => p.id === appointment.patientId);
-                  return (
-                    <li key={appointment.id} className="py-3 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                          {patient?.name.charAt(0)}
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-medium">{patient?.name}</h3>
-                          <p className="text-xs text-gray-500">
-                            {appointment.chiefComplaints.length > 30 
-                              ? `${appointment.chiefComplaints.substring(0, 30)}...` 
-                              : appointment.chiefComplaints}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock size={14} className="text-gray-400 mr-1" />
-                        <span className="text-sm text-gray-600">
-                          {format(new Date(appointment.date), 'MMM dd, h:mm a')}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <div className="text-center py-6 text-gray-500">
-                No upcoming appointments
+            {todaysAppointments.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Patient Name</th>
+                      <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Phone Number</th>
+                      <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Time</th>
+                      <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Type</th>
+                      <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Reminder Status</th>
+                      <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {todaysAppointments.map(appointment => {
+                      const patient = getPatientById(appointment.patientId);
+                      return (
+                        <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-3">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center mr-3">
+                                <UserIcon className="h-4 w-4 text-primary-600" />
+                              </div>
+                              <span className="text-sm font-medium">{patient?.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-sm text-gray-600">{patient?.phone}</td>
+                          <td className="py-3 px-3 text-sm text-gray-600">
+                            {format(new Date(appointment.date), 'h:mm a')}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${appointment.type === 'walk-in'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
+                              }`}>
+                              {appointment.type === 'walk-in' ? (
+                                <>
+                                  <UserIcon className="h-3 w-3 mr-1" />
+                                  Walk-in
+                                </>
+                              ) : (
+                                <>
+                                  <Phone className="h-3 w-3 mr-1" />
+                                  Phone Call
+                                </>
+                              )}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            {appointment.reminderSent ? (
+                              <span className="inline-flex items-center text-green-600 text-sm">
+                                <Bell className="h-4 w-4 mr-1" />
+                                Reminder Sent ✓
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 text-sm">Not Sent</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            {!appointment.reminderSent && (
+                              <button
+                                onClick={() => handleSendReminder(appointment, patient)}
+                                className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+                              >
+                                <Bell className="h-3 w-3 mr-1" />
+                                Send Reminder
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-800">Recent Visits</h2>
-            <Link to="/patients" className="text-primary-600 text-sm hover:underline flex items-center">
-              View All <ChevronRight size={16} />
-            </Link>
-          </div>
-          <div className="p-4">
-            {recentVisits.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
-                {recentVisits.map(visit => {
-                  const patient = mockPatients.find(p => p.id === visit.patientId);
-                  return (
-                    <li key={visit.id} className="py-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                            {patient?.name.charAt(0)}
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-medium">{patient?.name}</h3>
-                            <p className="text-xs text-gray-500">
-                              {visit.diagnosis.length > 30 
-                                ? `${visit.diagnosis.substring(0, 30)}...` 
-                                : visit.diagnosis}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {format(new Date(visit.date), 'MMM dd, yyyy')}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
             ) : (
               <div className="text-center py-6 text-gray-500">
-                No recent visits
+                No appointments scheduled for today
               </div>
             )}
           </div>
