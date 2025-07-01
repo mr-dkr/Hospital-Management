@@ -1,22 +1,29 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  User, Phone, Mail, MapPin, Calendar, Droplet, ArrowLeft, 
+import {
+  User, Phone, Mail, MapPin, Calendar, Droplet, ArrowLeft,
   AlertCircle, Plus, Clock, FileText, PlusCircle
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { getPatientById, getVisitsByPatientId, addVisit } from '../../data/mockData';
-import { Visit, Medication } from '../../types';
+import { format, isToday, isYesterday } from 'date-fns';
+import { getPatientById, getVisitsByPatientId, addVisit, getAppointments } from '../../data/mockData';
+import { Visit, Medication, Patient } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 const PatientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { state } = useAuth();
+  const [feedbackSent, setFeedbackSent] = useState<{ [patientId: string]: boolean }>({});
+  const [isLoading, setIsLoading] = useState<{ [patientId: string]: boolean }>({});
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+
   const [activeTab, setActiveTab] = useState('overview');
   const [showNewVisitForm, setShowNewVisitForm] = useState(false);
-  
+
   const patient = getPatientById(id || '');
   const visits = getVisitsByPatientId(id || '');
-  
+
   // New visit form state
   const [newVisitData, setNewVisitData] = useState({
     date: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
@@ -26,7 +33,7 @@ const PatientDetailPage = () => {
     notes: '',
     followUpDate: '',
   });
-  
+
   if (!patient) {
     return (
       <div className="text-center py-12">
@@ -44,7 +51,7 @@ const PatientDetailPage = () => {
       </div>
     );
   }
-  
+
   // Format patient age
   const birthDate = new Date(patient.dateOfBirth);
   const today = new Date();
@@ -53,15 +60,15 @@ const PatientDetailPage = () => {
   if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
     age--;
   }
-  
+
   const handleNewVisitChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewVisitData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleSubmitNewVisit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Parse medications from string to array of objects
     const medicationsArray: Medication[] = newVisitData.medications
       .split('\n')
@@ -69,7 +76,7 @@ const PatientDetailPage = () => {
       .map(line => {
         const [name, details] = line.split(':');
         if (!details) return { name: line.trim(), dosage: '', frequency: '', duration: '' };
-        
+
         const [dosage = '', frequency = '', duration = ''] = details.split(',');
         return {
           name: name.trim(),
@@ -78,7 +85,7 @@ const PatientDetailPage = () => {
           duration: duration.trim(),
         };
       });
-    
+
     // Add the visit
     addVisit({
       patientId: patient.id,
@@ -89,7 +96,7 @@ const PatientDetailPage = () => {
       notes: newVisitData.notes,
       followUpDate: newVisitData.followUpDate || undefined,
     });
-    
+
     // Reset form and hide it
     setNewVisitData({
       date: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm'),
@@ -100,11 +107,56 @@ const PatientDetailPage = () => {
       followUpDate: '',
     });
     setShowNewVisitForm(false);
-    
+
     // Refresh visits
     getVisitsByPatientId(patient.id);
   };
-  
+
+
+  const user = state.user;
+
+  const handleGetFeedback = async (patient: Patient) => {
+    setIsLoading(prev => ({ ...prev, [patient.id]: true }));
+    // Get all appointments for this patient
+    const appointments = getAppointments().filter(a => a.patientId === patient.id);
+    // Find the latest appointment by date
+    const lastRecentAppointment = appointments
+      .filter(a => isToday(new Date(a.date)) || isYesterday(new Date(a.date)))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+    // Format date and time if available
+    const dateStr = lastRecentAppointment ? new Date(lastRecentAppointment.date).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() : '';
+    const timeStr = lastRecentAppointment ? new Date(lastRecentAppointment.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).replace(':00', '').toUpperCase() : '';
+    const payload = {
+      to: `+91${patient.phone}`,
+      name: patient.name,
+      date: dateStr,
+      doc_name: user?.name || 'Doctor',
+      time: timeStr,
+      message_type: 'feedback',
+      message_lang: 'us',
+    };
+    try {
+      const response = await fetch('https://alti.prajnagpt.net:7500/api/whatsapp/send-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        setFeedbackSent(prev => ({ ...prev, [patient.id]: true }));
+        setShowAlert(true);
+        setAlertMessage(`${patient.name}'s visit added.`)
+      } else {
+        setAlertMessage(`Failed to send feedback request to ${patient.name}.`);
+      }
+    } catch {
+      setAlertMessage(`Failed to send feedback request to ${patient.name}.`);
+    }
+    setIsLoading(prev => ({ ...prev, [patient.id]: false }));
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 3000);
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="flex items-center mb-6">
@@ -116,7 +168,7 @@ const PatientDetailPage = () => {
         </button>
         <h1 className="text-3xl font-bold text-gray-800">Patient Details</h1>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
         <div className="md:flex">
           <div className="p-6 md:w-1/3 bg-primary-50 border-b md:border-b-0 md:border-r border-gray-200">
@@ -127,7 +179,7 @@ const PatientDetailPage = () => {
               <h2 className="text-xl font-bold text-gray-900">{patient.name}</h2>
               <p className="text-sm text-gray-500">{age} years, {patient.gender}</p>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex items-start">
                 <Phone className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
@@ -136,7 +188,7 @@ const PatientDetailPage = () => {
                   <p className="text-sm text-gray-500">{patient.phone}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <Mail className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
                 <div>
@@ -144,7 +196,7 @@ const PatientDetailPage = () => {
                   <p className="text-sm text-gray-500">{patient.email}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <MapPin className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
                 <div>
@@ -152,7 +204,7 @@ const PatientDetailPage = () => {
                   <p className="text-sm text-gray-500">{patient.address || 'Not provided'}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
                 <div>
@@ -160,7 +212,7 @@ const PatientDetailPage = () => {
                   <p className="text-sm text-gray-500">{format(new Date(patient.dateOfBirth), 'MMMM dd, yyyy')}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <Droplet className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
                 <div>
@@ -168,7 +220,7 @@ const PatientDetailPage = () => {
                   <p className="text-sm text-gray-500">{patient.bloodGroup || 'Not provided'}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <AlertCircle className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
                 <div>
@@ -186,39 +238,37 @@ const PatientDetailPage = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="md:w-2/3 p-6">
             <div className="border-b border-gray-200 mb-6">
               <div className="flex space-x-8">
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`pb-4 text-sm font-medium ${
-                    activeTab === 'overview'
-                      ? 'text-primary-600 border-b-2 border-primary-600'
-                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`pb-4 text-sm font-medium ${activeTab === 'overview'
+                    ? 'text-primary-600 border-b-2 border-primary-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   Overview
                 </button>
                 <button
                   onClick={() => setActiveTab('visits')}
-                  className={`pb-4 text-sm font-medium ${
-                    activeTab === 'visits'
-                      ? 'text-primary-600 border-b-2 border-primary-600'
-                      : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`pb-4 text-sm font-medium ${activeTab === 'visits'
+                    ? 'text-primary-600 border-b-2 border-primary-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   Visit History
                 </button>
               </div>
             </div>
-            
+
             {activeTab === 'overview' && (
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Patient Summary</h3>
                 </div>
-                
+
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -242,22 +292,22 @@ const PatientDetailPage = () => {
                       <p className="text-base font-medium">
                         {visits.some(visit => visit.followUpDate)
                           ? format(
-                              new Date(
-                                visits
-                                  .filter(visit => visit.followUpDate)
-                                  .sort(
-                                    (a, b) =>
-                                      new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime()
-                                  )[0].followUpDate!
-                              ),
-                              'MMMM dd, yyyy'
-                            )
+                            new Date(
+                              visits
+                                .filter(visit => visit.followUpDate)
+                                .sort(
+                                  (a, b) =>
+                                    new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime()
+                                )[0].followUpDate!
+                            ),
+                            'MMMM dd, yyyy'
+                          )
                           : 'No upcoming appointments'}
                       </p>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-medium text-gray-900">Recent Visits</h3>
@@ -268,7 +318,7 @@ const PatientDetailPage = () => {
                       View all
                     </button>
                   </div>
-                  
+
                   {visits.length > 0 ? (
                     <div className="space-y-4">
                       {visits.slice(0, 3).map(visit => (
@@ -322,7 +372,7 @@ const PatientDetailPage = () => {
                 </div>
               </div>
             )}
-            
+
             {activeTab === 'visits' && (
               <div>
                 <div className="flex justify-between items-center mb-6">
@@ -337,7 +387,7 @@ const PatientDetailPage = () => {
                     </button>
                   )}
                 </div>
-                
+
                 {showNewVisitForm && (
                   <div className="mb-8 border border-gray-200 rounded-lg p-4 bg-gray-50 animate-slide-in">
                     <h4 className="text-lg font-medium text-gray-900 mb-4">New Visit Record</h4>
@@ -357,7 +407,7 @@ const PatientDetailPage = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                           />
                         </div>
-                        
+
                         <div>
                           <label htmlFor="followUpDate" className="block text-sm font-medium text-gray-700 mb-1">
                             Follow Up Date (if needed)
@@ -372,7 +422,7 @@ const PatientDetailPage = () => {
                           />
                         </div>
                       </div>
-                      
+
                       <div className="mb-4">
                         <label htmlFor="chiefComplaints" className="block text-sm font-medium text-gray-700 mb-1">
                           Chief Complaints *
@@ -388,7 +438,7 @@ const PatientDetailPage = () => {
                           placeholder="Patient's reported symptoms and concerns"
                         />
                       </div>
-                      
+
                       <div className="mb-4">
                         <label htmlFor="diagnosis" className="block text-sm font-medium text-gray-700 mb-1">
                           Diagnosis *
@@ -404,7 +454,7 @@ const PatientDetailPage = () => {
                           placeholder="Clinical diagnosis"
                         />
                       </div>
-                      
+
                       <div className="mb-4">
                         <label htmlFor="medications" className="block text-sm font-medium text-gray-700 mb-1">
                           Medications
@@ -420,7 +470,7 @@ const PatientDetailPage = () => {
 Example: Amoxicillin: 500mg, Twice daily, 7 days"
                         />
                       </div>
-                      
+
                       <div className="mb-4">
                         <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
                           Notes
@@ -435,7 +485,7 @@ Example: Amoxicillin: 500mg, Twice daily, 7 days"
                           placeholder="Additional notes, instructions for the patient, etc."
                         />
                       </div>
-                      
+
                       <div className="flex justify-end">
                         <button
                           type="button"
@@ -446,6 +496,7 @@ Example: Amoxicillin: 500mg, Twice daily, 7 days"
                         </button>
                         <button
                           type="submit"
+                          onClick={() => handleGetFeedback(patient)}
                           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
                         >
                           Save Visit
@@ -454,7 +505,7 @@ Example: Amoxicillin: 500mg, Twice daily, 7 days"
                     </form>
                   </div>
                 )}
-                
+
                 {visits.length > 0 ? (
                   <div className="space-y-6">
                     {visits.map((visit: Visit) => (
@@ -470,7 +521,7 @@ Example: Amoxicillin: 500mg, Twice daily, 7 days"
                               {format(new Date(visit.date), 'h:mm a')}
                             </div>
                           </div>
-                          
+
                           {visit.followUpDate && (
                             <div className="mt-2 md:mt-0 bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm flex items-center">
                               <Calendar className="h-4 w-4 mr-1" />
@@ -478,12 +529,12 @@ Example: Amoxicillin: 500mg, Twice daily, 7 days"
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="mb-4">
                           <h5 className="text-sm font-medium text-gray-700 mb-1">Chief Complaints</h5>
                           <p className="text-sm text-gray-600">{visit.chiefComplaints}</p>
                         </div>
-                        
+
                         {visit.medications.length > 0 && (
                           <div className="mb-4">
                             <h5 className="text-sm font-medium text-gray-700 mb-1">Medications</h5>
@@ -499,14 +550,14 @@ Example: Amoxicillin: 500mg, Twice daily, 7 days"
                             </ul>
                           </div>
                         )}
-                        
+
                         {visit.notes && (
                           <div>
                             <h5 className="text-sm font-medium text-gray-700 mb-1">Notes</h5>
                             <p className="text-sm text-gray-600">{visit.notes}</p>
                           </div>
                         )}
-                        
+
                         {/* Add button to create follow-up from this visit */}
                         {!visit.followUpDate && (
                           <div className="mt-4 pt-4 border-t border-gray-200">

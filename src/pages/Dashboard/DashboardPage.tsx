@@ -164,6 +164,7 @@ const DashboardPage = () => {
                             </span>
                           </td>
                           <td className="py-3 px-3">
+
                             {appointment.reminderSent ? (
                               <span className="inline-flex items-center text-green-600 text-sm">
                                 <Bell className="h-4 w-4 mr-1" />
@@ -174,6 +175,12 @@ const DashboardPage = () => {
                             )}
                           </td>
                           <td className="py-3 px-3">
+                            <Link
+                              to={`/patients/${patient?.id}`}
+                              className="text-primary-600 hover:text-primary-900 transition-colors mr-6"
+                            >
+                              View
+                            </Link>
                             {!appointment.reminderSent && (
                               <button
                                 onClick={() => handleSendReminder(appointment, patient)}
