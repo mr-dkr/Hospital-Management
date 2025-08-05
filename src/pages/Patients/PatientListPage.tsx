@@ -1,20 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, Filter, UserPlus, User, Bell, Edit } from 'lucide-react';
-import { mockPatients, getAppointments } from '../../data/mockData';
 import { Patient } from '../../types';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { patientsAPI, OutPatient } from '../../api/patients';
+import { appointmentsAPI, OutPatientAppointment } from '../../api/appointments';
 
 const PatientListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [patients] = useState<Patient[]>(mockPatients);
+  const [patients, setPatients] = useState<OutPatient[]>([]);
+  const [appointments, setAppointments] = useState<OutPatientAppointment[]>([]);
+  const [loading, setLoading] = useState(true);
   const [feedbackSent, setFeedbackSent] = useState<{ [patientId: string]: boolean }>({});
   const [isLoading, setIsLoading] = useState<{ [patientId: string]: boolean }>({});
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const { state } = useAuth();
   const user = state.user;
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const [patientsData, appointmentsData] = await Promise.all([
+          patientsAPI.getOutPatients(token),
+          appointmentsAPI.getOutPatientAppointments(token)
+        ]);
+
+        setPatients(patientsData);
+        setAppointments(appointmentsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const filteredPatients = patients.filter(
     (patient) =>
@@ -23,12 +50,12 @@ const PatientListPage = () => {
       patient.phone.includes(searchTerm)
   );
 
-  const handleGetFeedback = async (patient: Patient) => {
+  const handleGetFeedback = async (patient: OutPatient) => {
     setIsLoading(prev => ({ ...prev, [patient.id]: true }));
     // Get all appointments for this patient
-    const appointments = getAppointments().filter(a => a.patientId === patient.id);
+    const patientAppointments = appointments.filter(a => a.patient_id === patient.id);
     // Find the latest appointment by date
-    const lastRecentAppointment = appointments
+    const lastRecentAppointment = patientAppointments
       .filter(a => isToday(new Date(a.date)) || isYesterday(new Date(a.date)))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     // Format date and time if available
@@ -110,7 +137,12 @@ const PatientListPage = () => {
           </div>
         </div>
 
-        {filteredPatients.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading patients...</p>
+          </div>
+        ) : filteredPatients.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -141,7 +173,7 @@ const PatientListPage = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredPatients.map((patient) => {
                   // Calculate age
-                  const birthDate = new Date(patient.dateOfBirth);
+                  const birthDate = new Date(patient.date_of_birth);
                   const today = new Date();
                   let age = today.getFullYear() - birthDate.getFullYear();
                   const m = today.getMonth() - birthDate.getMonth();
@@ -158,7 +190,7 @@ const PatientListPage = () => {
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{patient.name}</div>
-                            <div className="text-sm text-gray-500">{format(new Date(patient.createdAt), 'MMM dd, yyyy')}</div>
+                            <div className="text-sm text-gray-500">{format(new Date(patient.created_at), 'MMM dd, yyyy')}</div>
                           </div>
                         </div>
                       </td>
@@ -175,7 +207,7 @@ const PatientListPage = () => {
                         {age} years
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {patient.bloodGroup || 'N/A'}
+                        {patient.blood_group || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         N/A

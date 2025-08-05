@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { AuthState, AuthAction, User } from '../types';
-import { authenticate } from '../data/mockData';
+import { authAPI, LoginRequest, User as ApiUser } from '../api/auth';
 
 const initialState: AuthState = {
   user: null,
@@ -41,14 +41,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // In a real app, this would make an API call
-      const user = authenticate(email, password);
+      const loginData: LoginRequest = { email, password };
+      const response = await authAPI.login(loginData);
       
-      if (user) {
-        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
-        return true;
-      }
-      return false;
+      // Store token in localStorage
+      localStorage.setItem('token', response.access_token);
+      
+      // Get current user info
+      const user = await authAPI.getCurrentUser(response.access_token);
+      
+      // Convert API user to frontend user format
+      const frontendUser: User = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      };
+      
+      dispatch({ type: 'LOGIN_SUCCESS', payload: frontendUser });
+      return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
@@ -56,6 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    localStorage.removeItem('token');
     dispatch({ type: 'LOGOUT' });
   };
 

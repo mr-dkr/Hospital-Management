@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Activity, Calendar, ChevronRight, Bell, Phone, User as UserIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { mockPatients, getTodaysAppointments, getPatientById, updateAppointmentReminderStatus } from '../../data/mockData';
 import { format } from 'date-fns';
+import { patientsAPI, OutPatient } from '../../api/patients';
+import { appointmentsAPI, OutPatientAppointment } from '../../api/appointments';
 
 const DashboardPage = () => {
   const { state } = useAuth();
@@ -11,12 +12,42 @@ const DashboardPage = () => {
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [isLoading, setIsLoading] = useState<{ [appointmentId: string]: boolean }>({});
+  const [patients, setPatients] = useState<OutPatient[]>([]);
+  const [appointments, setAppointments] = useState<OutPatientAppointment[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const [patientsData, appointmentsData] = await Promise.all([
+          patientsAPI.getOutPatients(token),
+          appointmentsAPI.getOutPatientAppointments(token)
+        ]);
+
+        setPatients(patientsData);
+        setAppointments(appointmentsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Get today's appointments
-  const todaysAppointments = getTodaysAppointments();
+  const todaysAppointments = appointments.filter(apt => {
+    const today = new Date();
+    const aptDate = new Date(apt.date);
+    return aptDate.toDateString() === today.toDateString();
+  });
 
-  const handleSendReminder = async (appointment, patient) => {
+  const handleSendReminder = async (appointment: OutPatientAppointment, patient: OutPatient) => {
     // Prepare WhatsApp API payload
     setIsLoading(prev => ({ ...prev, [appointment.id]: true }));
 
@@ -37,7 +68,11 @@ const DashboardPage = () => {
         body: JSON.stringify(payload),
       });
       if (response.ok) {
-        updateAppointmentReminderStatus(appointment.id);
+        // Update appointment reminder status in the backend
+        const token = localStorage.getItem('token');
+        if (token) {
+          await appointmentsAPI.updateOutPatientAppointment(appointment.id, { reminder_sent: true }, token);
+        }
         setAlertMessage(`Reminder sent to ${patient.name} successfully!`);
       } else {
         setAlertMessage(`Failed to send reminder to ${patient.name}.`);
@@ -79,7 +114,7 @@ const DashboardPage = () => {
           </div>
           <div>
             <p className="text-sm text-gray-500">Total Patients</p>
-            <h3 className="text-2xl font-bold">{mockPatients.length}</h3>
+            <h3 className="text-2xl font-bold">{loading ? '...' : patients.length}</h3>
           </div>
         </div>
 
@@ -100,7 +135,7 @@ const DashboardPage = () => {
           <div>
             <p className="text-sm text-gray-500">Pending Reminders</p>
             <h3 className="text-2xl font-bold">
-              {todaysAppointments.filter(apt => !apt.reminderSent).length}
+              {loading ? '...' : todaysAppointments.filter(apt => !apt.reminder_sent).length}
             </h3>
           </div>
         </div>
@@ -115,7 +150,12 @@ const DashboardPage = () => {
             </Link>
           </div>
           <div className="p-4">
-            {todaysAppointments.length > 0 ? (
+            {loading ? (
+              <div className="text-center py-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading appointments...</p>
+              </div>
+            ) : todaysAppointments.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
@@ -130,7 +170,7 @@ const DashboardPage = () => {
                   </thead>
                   <tbody>
                     {todaysAppointments.map(appointment => {
-                      const patient = getPatientById(appointment.patientId);
+                      const patient = patients.find(p => p.id === appointment.patient_id);
                       return (
                         <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-3">
@@ -165,7 +205,7 @@ const DashboardPage = () => {
                           </td>
                           <td className="py-3 px-3">
 
-                            {appointment.reminderSent ? (
+                            {appointment.reminder_sent ? (
                               <span className="inline-flex items-center text-green-600 text-sm">
                                 <Bell className="h-4 w-4 mr-1" />
                                 Reminder Sent ✓
@@ -181,7 +221,7 @@ const DashboardPage = () => {
                             >
                               View
                             </Link>
-                            {!appointment.reminderSent && (
+                            {!appointment.reminder_sent && (
                               <button
                                 onClick={() => handleSendReminder(appointment, patient)}
                                 className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"

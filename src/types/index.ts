@@ -12,11 +12,15 @@ export interface Patient {
   phone: string;
   email: string;
   gender: 'male' | 'female' | 'other';
-  dateOfBirth: string;
-  bloodGroup?: string;
+  date_of_birth: string;
+  blood_group?: string;
   address?: string;
-  allergies?: string[];
-  createdAt: string;
+  allergies?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  insurance_provider?: string;
+  insurance_number?: string;
+  created_at: string;
 }
 
 export interface Visit {
@@ -38,24 +42,28 @@ export interface Medication {
 }
 export interface Feedback {
   id: string;
-  patientId: string;
-  patientName: string;
-  appointmentId: string;
-  visitDate: string;
+  patient_id: string;
+  patient_name: string;
+  appointment_id: string;
+  visit_date: string;
   rating: 'happy' | 'satisfied' | 'not-satisfied';
   comments: string;
-  submittedDate: string;
+  submitted_date: string;
   category: 'service' | 'wait-time' | 'treatment' | 'facilities' | 'overall';
+  created_at: string;
 }
 
 export interface Appointment {
   id: string;
-  patientId: string;
+  patient_id: string;
   date: string;
-  type: 'walk-in' | 'phone-call';
-  status: 'scheduled' | 'completed' | 'cancelled';
-  reminderSent: boolean;
+  type: 'walk-in' | 'phone-call' | 'video-call';
+  status: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
+  reminder_sent: boolean;
   notes?: string;
+  doctor_id?: string;
+  appointment_type: 'consultation' | 'follow-up' | 'emergency' | 'routine';
+  created_at: string;
 }
 
 export type AuthState = {

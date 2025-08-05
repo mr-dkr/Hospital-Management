@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquare, Search, Calendar, Filter, Smile, Meh, Frown, User, Star } from 'lucide-react';
-import { getFeedback, getPatients } from '../../data/mockData';
+import { feedbackAPI, Feedback } from '../../api/feedback';
 
 
 const FeedbackPage: React.FC = () => {
-    const feedback = getFeedback();
-    const patients = getPatients();
+    const [feedback, setFeedback] = useState<Feedback[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [ratingFilter, setRatingFilter] = useState<string>('all');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -38,12 +38,31 @@ const FeedbackPage: React.FC = () => {
         }
     };
 
+    // Fetch feedback data on component mount
+    useEffect(() => {
+        const fetchFeedback = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+
+                const feedbackData = await feedbackAPI.getFeedbacks(token);
+                setFeedback(feedbackData);
+            } catch (error) {
+                console.error('Error fetching feedback:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchFeedback();
+    }, []);
+
     const filteredFeedback = feedback.filter(item => {
-        const matchesSearch = item.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const matchesSearch = item.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.comments.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesRating = ratingFilter === 'all' || item.rating === ratingFilter;
         const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
-        const matchesDate = !dateFilter || item.submittedDate.includes(dateFilter);
+        const matchesDate = !dateFilter || item.submitted_date.includes(dateFilter);
 
         return matchesSearch && matchesRating && matchesCategory && matchesDate;
     });
@@ -67,6 +86,12 @@ const FeedbackPage: React.FC = () => {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                {loading ? (
+                    <div className="col-span-4 text-center py-8">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-4 text-gray-600">Loading feedback statistics...</p>
+                    </div>
+                ) : (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div className="flex items-center justify-between">
                         <div>
@@ -106,6 +131,7 @@ const FeedbackPage: React.FC = () => {
                         <Frown className="w-8 h-8 text-red-600" />
                     </div>
                 </div>
+                )}
             </div>
 
             {/* Filters */}
@@ -189,9 +215,9 @@ const FeedbackPage: React.FC = () => {
                                                     <User className="w-5 h-5 text-blue-600" />
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-medium text-gray-800">{item.patientName}</h3>
+                                                    <h3 className="font-medium text-gray-800">{item.patient_name}</h3>
                                                     <p className="text-sm text-gray-600">
-                                                        Visit: {new Date(item.visitDate).toLocaleDateString('en-IN')}
+                                                        Visit: {new Date(item.visit_date).toLocaleDateString('en-IN')}
                                                     </p>
                                                 </div>
                                             </div>
@@ -207,7 +233,7 @@ const FeedbackPage: React.FC = () => {
                                         </div>
                                         <p className="text-sm text-gray-600 line-clamp-3 mb-2">{item.comments}</p>
                                         <div className="flex items-center justify-between text-xs text-gray-500">
-                                            <span>Submitted: {new Date(item.submittedDate).toLocaleDateString('en-IN')}</span>
+                                            <span>Submitted: {new Date(item.submitted_date).toLocaleDateString('en-IN')}</span>
                                         </div>
                                     </div>
                                 ))
@@ -227,9 +253,9 @@ const FeedbackPage: React.FC = () => {
                                             <User className="w-6 h-6 text-blue-600" />
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-semibold text-gray-800">{selectedFeedback.patientName}</h2>
+                                            <h2 className="text-lg font-semibold text-gray-800">{selectedFeedback.patient_name}</h2>
                                             <p className="text-sm text-gray-600">
-                                                {new Date(selectedFeedback.visitDate).toLocaleDateString('en-IN', {
+                                                {new Date(selectedFeedback.visit_date).toLocaleDateString('en-IN', {
                                                     weekday: 'long',
                                                     year: 'numeric',
                                                     month: 'long',
@@ -266,15 +292,15 @@ const FeedbackPage: React.FC = () => {
                                         <div className="space-y-2 text-sm text-gray-600">
                                             <div className="flex justify-between">
                                                 <span>Visit Date:</span>
-                                                <span>{new Date(selectedFeedback.visitDate).toLocaleDateString('en-IN')}</span>
+                                                <span>{new Date(selectedFeedback.visit_date).toLocaleDateString('en-IN')}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>Submitted:</span>
-                                                <span>{new Date(selectedFeedback.submittedDate).toLocaleDateString('en-IN')}</span>
+                                                <span>{new Date(selectedFeedback.submitted_date).toLocaleDateString('en-IN')}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>Appointment ID:</span>
-                                                <span className="font-mono text-xs">{selectedFeedback.appointmentId}</span>
+                                                <span className="font-mono text-xs">{selectedFeedback.appointment_id}</span>
                                             </div>
                                         </div>
                                     </div>

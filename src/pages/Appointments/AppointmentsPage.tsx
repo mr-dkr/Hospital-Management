@@ -1,26 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, User, Plus, Search, Bell, Phone, UserIcon } from 'lucide-react';
 import { format, isToday, isYesterday, isTomorrow } from 'date-fns';
-import { getAppointments, getPatientById, updateAppointmentReminderStatus } from '../../data/mockData';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Appointment, Patient } from '../../types';
+import { OutPatientAppointment } from '../../api/appointments';
+import { OutPatient } from '../../api/patients';
+import { appointmentsAPI } from '../../api/appointments';
+import { patientsAPI } from '../../api/patients';
 
 const AppointmentsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('today');
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [appointments, setAppointments] = useState<OutPatientAppointment[]>([]);
+  const [patients, setPatients] = useState<OutPatient[]>([]);
+  const [loading, setLoading] = useState(true);
   const { state } = useAuth();
   const user = state.user;
   const [isLoading, setIsLoading] = useState<{ [appointmentId: string]: boolean }>({});
 
-  const appointments = getAppointments();
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const [appointmentsData, patientsData] = await Promise.all([
+          appointmentsAPI.getOutPatientAppointments(token),
+          patientsAPI.getOutPatients(token)
+        ]);
+
+        setAppointments(appointmentsData);
+        setPatients(patientsData);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Filter appointments by tab
   const getFilteredAppointments = () => {
     const filtered = appointments.filter(appointment => {
-      const patient = getPatientById(appointment.patientId);
+      const patient = patients.find(p => p.id === appointment.patient_id);
       const matchesSearch = patient?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         patient?.phone.includes(searchTerm);
 
@@ -49,7 +76,7 @@ const AppointmentsPage = () => {
 
   const filteredAppointments = getFilteredAppointments();
 
-  const handleSendReminder = async (appointment: Appointment, patient: Patient) => {
+  const handleSendReminder = async (appointment: OutPatientAppointment, patient: OutPatient) => {
     setIsLoading(prev => ({ ...prev, [appointment.id]: true }));
     const payload = {
       to: `+91${patient.phone}`,
@@ -67,7 +94,11 @@ const AppointmentsPage = () => {
         body: JSON.stringify(payload),
       });
       if (response.ok) {
-        updateAppointmentReminderStatus(appointment.id);
+        // Update appointment reminder status in the backend
+        const token = localStorage.getItem('token');
+        if (token) {
+          await appointmentsAPI.updateOutPatientAppointment(appointment.id, { reminder_sent: true }, token);
+        }
         setAlertMessage(`Reminder sent to ${patient.name} successfully!`);
       } else {
         setAlertMessage(`Failed to send reminder to ${patient.name}.`);
@@ -162,7 +193,12 @@ const AppointmentsPage = () => {
 
         {/* Appointments Table */}
         <div className="overflow-x-auto">
-          {filteredAppointments.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading appointments...</p>
+            </div>
+          ) : filteredAppointments.length > 0 ? (
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -188,7 +224,7 @@ const AppointmentsPage = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredAppointments.map((appointment) => {
-                  const patient = getPatientById(appointment.patientId);
+                  const patient = patients.find(p => p.id === appointment.patient_id);
                   return (
                     <tr key={appointment.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -232,7 +268,7 @@ const AppointmentsPage = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {appointment.reminderSent ? (
+                        {appointment.reminder_sent ? (
                           <span className="inline-flex items-center text-green-600 text-sm">
                             <Bell className="h-4 w-4 mr-1" />
                             Reminder Sent ✓
@@ -248,7 +284,7 @@ const AppointmentsPage = () => {
                         >
                           View
                         </Link>
-                        {!appointment.reminderSent && patient && (
+                        {!appointment.reminder_sent && patient && (
                           <button
                             onClick={() => handleSendReminder(appointment, patient)}
                             className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
